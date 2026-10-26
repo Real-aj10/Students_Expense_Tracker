@@ -1,0 +1,1964 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CampusSpend - Student Expense Tracker</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eef2ff',
+              100: '#e0e7ff',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca',
+            }
+          },
+          animation: {
+            'float-slow': 'float 6s ease-in-out infinite',
+            'float-delayed': 'float 7s ease-in-out 1.5s infinite',
+            'float-reverse': 'floatRev 6.5s ease-in-out 0.8s infinite',
+          },
+          keyframes: {
+            float: {
+              '0%, 100%': { transform: 'translateY(0px) rotate(0deg)' },
+              '50%': { transform: 'translateY(-10px) rotate(0.8deg)' },
+            },
+            floatRev: {
+              '0%, 100%': { transform: 'translateY(0px) rotate(0deg)' },
+              '50%': { transform: 'translateY(8px) rotate(-0.8deg)' },
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* Zero gravity floating classes */
+    .zero-gravity-active .zg-card {
+      animation: zgFloat 5s ease-in-out infinite alternate !important;
+      transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .zero-gravity-active .zg-card:nth-child(2n) {
+      animation-duration: 6.2s !important;
+      animation-delay: 0.4s !important;
+    }
+    .zero-gravity-active .zg-card:nth-child(3n) {
+      animation-duration: 4.8s !important;
+      animation-delay: 0.9s !important;
+    }
+    .zero-gravity-active .zg-card:hover {
+      transform: translateY(-12px) scale(1.02) rotate(1deg) !important;
+      box-shadow: 0 20px 30px -10px rgba(99, 102, 241, 0.35) !important;
+    }
+    @keyframes zgFloat {
+      0% { transform: translateY(0px) rotate(0deg); }
+      50% { transform: translateY(-12px) rotate(1.2deg); }
+      100% { transform: translateY(6px) rotate(-0.8deg); }
+    }
+
+    /* Floating particles for Zero-G */
+    .zg-particle {
+      position: fixed;
+      pointer-events: none;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(165,180,252,0.8) 0%, rgba(99,102,241,0) 70%);
+      z-index: 40;
+      animation: particleFloat 12s linear infinite;
+    }
+    @keyframes particleFloat {
+      0% { transform: translateY(105vh) translateX(0) scale(0.6); opacity: 0; }
+      20% { opacity: 0.7; }
+      80% { opacity: 0.7; }
+      100% { transform: translateY(-10vh) translateX(80px) scale(1.1); opacity: 0; }
+    }
+
+    /* Custom scrollbar */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #f1f5f9; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col font-sans transition-colors duration-300">
+
+  <!-- Floating Particles Container (Zero-G Mode) -->
+  <div id="particles-container"></div>
+
+  <!-- Header Navigation -->
+  <header class="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-slate-200 shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16">
+        
+        <!-- Brand / Title -->
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-indigo-400 flex items-center justify-center text-white shadow-md shadow-indigo-200">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+            </svg>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <h1 class="text-lg font-bold text-slate-900 tracking-tight">CampusSpend</h1>
+              <span class="px-2 py-0.5 text-xs font-semibold bg-indigo-50 text-indigo-700 rounded-full border border-indigo-200/60">Student Tracker</span>
+            </div>
+            <p class="text-xs text-slate-500 hidden sm:block">Campus Financial Ledger & Smart Habit Analytics</p>
+          </div>
+        </div>
+
+        <!-- 3 Primary Navigation Tabs (Excluding removed VS Code & Python API tab) -->
+        <nav class="hidden md:flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200/80">
+          <button id="nav-btn-ledger" onclick="switchTab('ledger')" class="nav-tab flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all bg-white text-indigo-600 shadow-sm">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/></svg>
+            Daily Spending & Ledger
+          </button>
+          <button id="nav-btn-charts" onclick="switchTab('charts')" class="nav-tab flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all text-slate-600 hover:text-slate-900">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"/></svg>
+            Spending Charts & Analysis
+          </button>
+          <button id="nav-btn-savings" onclick="switchTab('savings')" class="nav-tab flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all text-slate-600 hover:text-slate-900">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
+            Student Savings Tips
+          </button>
+        </nav>
+
+        <!-- Right Quick Actions & Antigravity Controls -->
+        <div class="flex items-center gap-2">
+          
+          <!-- Zero-Gravity Toggle -->
+          <button id="zg-toggle-btn" onclick="toggleZeroGravity()" title="Toggle Zero-Gravity Physics Mode" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-indigo-200 bg-indigo-50/70 text-indigo-700 hover:bg-indigo-100 transition-all">
+            <span class="text-sm">🚀</span>
+            <span class="hidden sm:inline font-semibold">Zero-G Mode</span>
+            <span id="zg-status-badge" class="ml-1 w-2 h-2 rounded-full bg-slate-300"></span>
+          </button>
+
+          <!-- Antigravity Python Shell (xkcd #353) Modal Trigger -->
+          <button onclick="openAntigravityModal()" title="Open Antigravity Python Terminal (xkcd #353)" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition-all shadow-sm">
+            <span class="text-sm">🐍</span>
+            <span class="hidden sm:inline font-mono text-[11px] font-bold">antigravity</span>
+          </button>
+
+          <!-- Budget Config Button -->
+          <button onclick="openBudgetModal()" title="Customize Monthly Budget" class="p-2 rounded-lg border border-slate-200 bg-white text-slate-600 hover:text-indigo-600 hover:bg-slate-50 transition-all shadow-sm">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Mobile Navigation Bar -->
+      <div class="flex md:hidden border-t border-slate-200 py-2 gap-1 justify-around">
+        <button onclick="switchTab('ledger')" id="mob-nav-ledger" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-indigo-50 text-indigo-700">Ledger</button>
+        <button onclick="switchTab('charts')" id="mob-nav-charts" class="px-3 py-1.5 text-xs font-semibold rounded-lg text-slate-600">Charts</button>
+        <button onclick="switchTab('savings')" id="mob-nav-savings" class="px-3 py-1.5 text-xs font-semibold rounded-lg text-slate-600">Savings Tips</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Container -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+    <!-- Top Cushion Gauge & Financial Health Banner -->
+    <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      
+      <!-- Total Month Spend -->
+      <div class="zg-card bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm relative overflow-hidden transition-all">
+        <div class="flex items-center justify-between text-slate-500 mb-2">
+          <span class="text-xs font-semibold uppercase tracking-wider">Month Spending</span>
+          <span class="p-1.5 bg-indigo-50 text-indigo-600 rounded-lg">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          </span>
+        </div>
+        <div class="flex items-baseline gap-2">
+          <span id="metric-total-spent" class="text-2xl font-black text-slate-900">$0.00</span>
+          <span class="text-xs text-slate-500">of <span id="metric-budget-cap">$850.00</span></span>
+        </div>
+        <!-- Cushion bar -->
+        <div class="w-full bg-slate-100 rounded-full h-2 mt-3 overflow-hidden">
+          <div id="cushion-progress-bar" class="bg-indigo-600 h-2 rounded-full transition-all duration-500" style="width: 0%"></div>
+        </div>
+        <p id="cushion-subtext" class="text-[11px] text-slate-500 mt-2 flex items-center justify-between">
+          <span>Remaining Cushion:</span>
+          <span id="metric-cushion-rem" class="font-bold text-emerald-600">$850.00</span>
+        </p>
+      </div>
+
+      <!-- Safe Daily Burn Rate -->
+      <div class="zg-card bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm relative overflow-hidden transition-all">
+        <div class="flex items-center justify-between text-slate-500 mb-2">
+          <span class="text-xs font-semibold uppercase tracking-wider">Safe Daily Burn</span>
+          <span class="p-1.5 bg-emerald-50 text-emerald-600 rounded-lg">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+          </span>
+        </div>
+        <div class="flex items-baseline gap-2">
+          <span id="metric-burn-rate" class="text-2xl font-black text-slate-900">$28.33</span>
+          <span class="text-xs text-slate-500">/ day</span>
+        </div>
+        <div class="mt-3 flex items-center justify-between text-[11px] text-slate-500">
+          <span>Days left in month:</span>
+          <span id="metric-days-left" class="font-bold text-slate-800">18 days</span>
+        </div>
+        <p class="text-[11px] text-slate-400 mt-1">Calculated safe daily allowance</p>
+      </div>
+
+      <!-- Financial Health Score (0-100) -->
+      <div class="zg-card bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm relative overflow-hidden transition-all">
+        <div class="flex items-center justify-between text-slate-500 mb-2">
+          <span class="text-xs font-semibold uppercase tracking-wider">Financial Health</span>
+          <span class="p-1.5 bg-amber-50 text-amber-600 rounded-lg">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+          </span>
+        </div>
+        <div class="flex items-baseline gap-2">
+          <span id="metric-health-score" class="text-2xl font-black text-emerald-600">88</span>
+          <span class="text-xs font-semibold text-slate-500">/ 100</span>
+        </div>
+        <div class="mt-3 flex items-center justify-between text-[11px]">
+          <span class="text-slate-500">Student Pace Status:</span>
+          <span id="metric-health-label" class="font-bold text-emerald-600">Comfortable Buffer</span>
+        </div>
+        <p class="text-[11px] text-slate-400 mt-1">Weighted by burn rate & margin</p>
+      </div>
+
+      <!-- Quick Action / Total Expenses Count -->
+      <div class="zg-card bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm relative overflow-hidden flex flex-col justify-between transition-all">
+        <div>
+          <div class="flex items-center justify-between text-slate-500 mb-1">
+            <span class="text-xs font-semibold uppercase tracking-wider">Total Recorded</span>
+            <span id="metric-trans-count" class="px-2 py-0.5 text-xs font-bold rounded-full bg-slate-100 text-slate-700">0 Items</span>
+          </div>
+          <p class="text-xs text-slate-500">Offline-first local storage active</p>
+        </div>
+        <div class="pt-3 flex gap-2">
+          <button onclick="openAddModal()" class="flex-1 py-2 px-3 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-xl flex items-center justify-center gap-1.5 shadow-sm transition-all">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            + Add Expense
+          </button>
+          <button onclick="loadSampleData()" title="Pre-fill with realistic student sample transactions" class="py-2 px-3 border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-xl transition-all">
+            Sample
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- TAB 1: DAILY SPENDING & LEDGER             -->
+    <!-- ========================================== -->
+    <div id="tab-ledger" class="space-y-6">
+      
+      <!-- 1-Click Student Presets Bar -->
+      <div class="zg-card bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-pink-500/10 border border-indigo-100 rounded-2xl p-4">
+        <div class="flex items-center justify-between mb-3">
+          <div class="flex items-center gap-2">
+            <span class="text-base">⚡</span>
+            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-800">1-Click Student Presets</h3>
+            <span class="text-[11px] text-slate-500 hidden sm:inline">— Tap to quickly log frequent campus purchases</span>
+          </div>
+          <button onclick="resetDataConfirm()" class="text-[11px] font-semibold text-rose-600 hover:underline">Clear All</button>
+        </div>
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+          <button onclick="quickAdd('Campus Cafeteria Lunch', 12.50, 'Food & Groceries', 'Campus ID Card', 'Dining hall combo', '#cafeteria')" class="p-2.5 bg-white hover:bg-indigo-50 border border-slate-200/90 rounded-xl text-left transition-all hover:scale-[1.02] shadow-xs group">
+            <div class="text-base">🍱</div>
+            <div class="text-xs font-bold text-slate-800 group-hover:text-indigo-600 truncate">Cafeteria Lunch</div>
+            <div class="text-[11px] font-semibold text-indigo-600">$12.50</div>
+          </button>
+          <button onclick="quickAdd('Textbook Rental', 35.00, 'Tuition & Books', 'Debit', 'Digital 120-day rental', '#books')" class="p-2.5 bg-white hover:bg-indigo-50 border border-slate-200/90 rounded-xl text-left transition-all hover:scale-[1.02] shadow-xs group">
+            <div class="text-base">📚</div>
+            <div class="text-xs font-bold text-slate-800 group-hover:text-indigo-600 truncate">Textbook Rental</div>
+            <div class="text-[11px] font-semibold text-indigo-600">$35.00</div>
+          </button>
+          <button onclick="quickAdd('Subway / Metro Pass', 2.75, 'Transit', 'Campus ID Card', 'Campus route ride', '#transit')" class="p-2.5 bg-white hover:bg-indigo-50 border border-slate-200/90 rounded-xl text-left transition-all hover:scale-[1.02] shadow-xs group">
+            <div class="text-base">🚇</div>
+            <div class="text-xs font-bold text-slate-800 group-hover:text-indigo-600 truncate">Subway Pass</div>
+            <div class="text-[11px] font-semibold text-indigo-600">$2.75</div>
+          </button>
+          <button onclick="quickAdd('Dorm Groceries', 48.20, 'Food & Groceries', 'Debit', 'Oats, milk, ramen, snacks', '#dorm')" class="p-2.5 bg-white hover:bg-indigo-50 border border-slate-200/90 rounded-xl text-left transition-all hover:scale-[1.02] shadow-xs group">
+            <div class="text-base">🛒</div>
+            <div class="text-xs font-bold text-slate-800 group-hover:text-indigo-600 truncate">Dorm Groceries</div>
+            <div class="text-[11px] font-semibold text-indigo-600">$48.20</div>
+          </button>
+          <button onclick="quickAdd('Iced Coffee & Study Fuel', 5.25, 'Food & Groceries', 'Venmo / UPI', 'Library cafe espresso', '#study')" class="p-2.5 bg-white hover:bg-indigo-50 border border-slate-200/90 rounded-xl text-left transition-all hover:scale-[1.02] shadow-xs group">
+            <div class="text-base">☕</div>
+            <div class="text-xs font-bold text-slate-800 group-hover:text-indigo-600 truncate">Iced Coffee</div>
+            <div class="text-[11px] font-semibold text-indigo-600">$5.25</div>
+          </button>
+          <button onclick="quickAdd('Late Night Pizza Slice', 4.50, 'Food & Groceries', 'Cash', 'Post-study slice', '#snack')" class="p-2.5 bg-white hover:bg-indigo-50 border border-slate-200/90 rounded-xl text-left transition-all hover:scale-[1.02] shadow-xs group">
+            <div class="text-base">🍕</div>
+            <div class="text-xs font-bold text-slate-800 group-hover:text-indigo-600 truncate">Pizza Slice</div>
+            <div class="text-[11px] font-semibold text-indigo-600">$4.50</div>
+          </button>
+        </div>
+      </div>
+
+      <!-- Ledger Filter & Controls Bar -->
+      <div class="zg-card bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col md:flex-row gap-3 items-center justify-between">
+        
+        <!-- Search -->
+        <div class="relative w-full md:w-72">
+          <input type="text" id="search-input" oninput="renderLedger()" placeholder="Search description, tag, or note..." class="w-full pl-9 pr-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+          <svg class="w-4 h-4 text-slate-400 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+        </div>
+
+        <!-- Filters & Sorting -->
+        <div class="flex flex-wrap items-center gap-2 w-full md:w-auto justify-end">
+          <select id="filter-category" onchange="renderLedger()" class="text-xs bg-slate-50 border border-slate-200 py-2 px-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            <option value="ALL">All Categories</option>
+            <option value="Food & Groceries">Food & Groceries</option>
+            <option value="Tuition & Books">Tuition & Books</option>
+            <option value="Rent & Housing">Rent & Housing</option>
+            <option value="Entertainment">Entertainment</option>
+            <option value="Tech & Subscriptions">Tech & Subscriptions</option>
+            <option value="Transit">Transit</option>
+            <option value="Health">Health</option>
+            <option value="Other">Other</option>
+          </select>
+
+          <select id="filter-payment" onchange="renderLedger()" class="text-xs bg-slate-50 border border-slate-200 py-2 px-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            <option value="ALL">All Payment Methods</option>
+            <option value="Campus ID Card">Campus ID Card</option>
+            <option value="Debit">Debit</option>
+            <option value="Venmo / UPI">Venmo / UPI</option>
+            <option value="Cash">Cash</option>
+          </select>
+
+          <select id="sort-order" onchange="renderLedger()" class="text-xs bg-slate-50 border border-slate-200 py-2 px-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            <option value="date-desc">Date (Newest)</option>
+            <option value="date-asc">Date (Oldest)</option>
+            <option value="amt-desc">Amount (Highest)</option>
+            <option value="amt-asc">Amount (Lowest)</option>
+          </select>
+
+          <!-- Export & Import Buttons -->
+          <div class="flex items-center gap-1 border-l border-slate-200 pl-2">
+            <button onclick="exportToCSV()" title="Export Ledger to CSV format" class="p-2 text-slate-600 hover:text-indigo-600 hover:bg-slate-100 rounded-xl transition-all" title="Download CSV">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+            </button>
+            <button onclick="exportToJSON()" title="Export Ledger to JSON" class="p-2 text-slate-600 hover:text-indigo-600 hover:bg-slate-100 rounded-xl transition-all" title="Download JSON">
+              <span class="text-xs font-bold font-mono">{ }</span>
+            </button>
+            <label class="p-2 text-slate-600 hover:text-indigo-600 hover:bg-slate-100 rounded-xl transition-all cursor-pointer" title="Import JSON / CSV">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+              <input type="file" id="import-file-input" onchange="importExpenses(event)" accept=".json,.csv" class="hidden">
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Expense Ledger Table -->
+      <div class="zg-card bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="bg-slate-50/80 border-b border-slate-200/80 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                <th class="py-3 px-4">Date</th>
+                <th class="py-3 px-4">Description</th>
+                <th class="py-3 px-4">Category</th>
+                <th class="py-3 px-4">Payment</th>
+                <th class="py-3 px-4">Tags & Notes</th>
+                <th class="py-3 px-4 text-right">Amount</th>
+                <th class="py-3 px-4 text-center">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="ledger-table-body" class="divide-y divide-slate-100 text-xs">
+              <!-- Dynamically populated rows -->
+            </tbody>
+          </table>
+        </div>
+        <!-- Empty State -->
+        <div id="ledger-empty-state" class="hidden py-12 text-center">
+          <div class="text-3xl mb-2">💸</div>
+          <p class="text-sm font-semibold text-slate-700">No expenses found</p>
+          <p class="text-xs text-slate-400 mt-1">Add an expense or load sample data to get started</p>
+          <button onclick="loadSampleData()" class="mt-3 px-4 py-2 bg-indigo-50 text-indigo-600 rounded-xl text-xs font-semibold hover:bg-indigo-100 transition-all">Load Student Sample Data</button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ========================================== -->
+    <!-- TAB 2: SPENDING CHARTS & ANALYSIS          -->
+    <!-- ========================================== -->
+    <div id="tab-charts" class="space-y-6 hidden">
+      
+      <!-- Charts Row 1: Category Donut + Daily Trajectory -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        
+        <!-- Category Donut Chart SVG -->
+        <div class="zg-card bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h3 class="text-sm font-bold text-slate-900">Category Spending Breakdown</h3>
+              <p class="text-xs text-slate-500">Proportional expenditure across campus life</p>
+            </div>
+            <span class="text-xs font-bold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-lg" id="chart-total-pill">$0.00</span>
+          </div>
+
+          <div class="flex flex-col sm:flex-row items-center gap-6">
+            <!-- SVG Donut -->
+            <div class="relative w-48 h-48 flex-shrink-0">
+              <svg id="donut-svg" class="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                <!-- SVG arcs will be injected dynamically -->
+              </svg>
+              <!-- Center Readout -->
+              <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                <span class="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Top Spend</span>
+                <span id="donut-center-category" class="text-xs font-bold text-slate-800 text-center px-2 truncate max-w-[110px]">—</span>
+                <span id="donut-center-amount" class="text-sm font-black text-indigo-600">$0.00</span>
+              </div>
+            </div>
+
+            <!-- Category Legend -->
+            <div id="category-legend-list" class="flex-1 w-full space-y-2 text-xs">
+              <!-- Dynamically populated legend items -->
+            </div>
+          </div>
+        </div>
+
+        <!-- 14-Day Daily Trajectory Bar Chart -->
+        <div class="zg-card bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h3 class="text-sm font-bold text-slate-900">14-Day Spending Trajectory</h3>
+              <p class="text-xs text-slate-500">Daily spending cadence vs. safe burn rate benchmark</p>
+            </div>
+            <div class="flex items-center gap-2 text-[11px]">
+              <span class="flex items-center gap-1 text-slate-500"><span class="w-2.5 h-2.5 rounded-sm bg-indigo-500 inline-block"></span> Daily</span>
+              <span class="flex items-center gap-1 text-slate-500"><span class="w-2.5 h-0.5 bg-rose-400 inline-block"></span> Burn Line</span>
+            </div>
+          </div>
+
+          <!-- Interactive Bar Chart Area -->
+          <div class="relative flex-1 min-h-[190px] flex items-end pt-6" id="trajectory-chart-container">
+            <!-- Trajectory Bars and Burn Line injected here -->
+          </div>
+          
+          <div class="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
+            <span>Left: 14 days ago</span>
+            <span class="font-medium text-slate-700">Hover bars to view daily receipts</span>
+            <span>Right: Today</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Charts Row 2: Budget vs Actual Variance & Habit Insights -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        
+        <!-- Budget vs Actual Variance Progress Bars -->
+        <div class="zg-card bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h3 class="text-sm font-bold text-slate-900">Budget vs. Actual Variance</h3>
+              <p class="text-xs text-slate-500">Category target cushion and overage indicators</p>
+            </div>
+            <button onclick="openBudgetModal()" class="text-xs text-indigo-600 hover:underline font-semibold">Adjust Caps</button>
+          </div>
+          <div id="variance-bars-container" class="space-y-3.5">
+            <!-- Injected category comparison bars -->
+          </div>
+        </div>
+
+        <!-- Student Habit Insights -->
+        <div class="zg-card bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-4">
+              <div>
+                <h3 class="text-sm font-bold text-slate-900">Student Habit Insights</h3>
+                <p class="text-xs text-slate-500">Behavioral patterns and anomaly detection</p>
+              </div>
+              <span class="text-lg">🧠</span>
+            </div>
+
+            <!-- Weekend vs Weekday Ratio -->
+            <div class="p-4 bg-slate-50 rounded-xl border border-slate-200/80 mb-4">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-bold text-slate-700">Weekend vs. Weekday Ratio</span>
+                <span id="insight-weekend-ratio" class="text-xs font-extrabold text-indigo-600">--% Weekend</span>
+              </div>
+              <div class="w-full bg-slate-200 rounded-full h-2.5 overflow-hidden flex">
+                <div id="ratio-weekday-bar" class="bg-indigo-500 h-2.5 transition-all" style="width: 50%" title="Weekday"></div>
+                <div id="ratio-weekend-bar" class="bg-amber-400 h-2.5 transition-all" style="width: 50%" title="Weekend"></div>
+              </div>
+              <div class="flex justify-between text-[11px] text-slate-500 mt-2">
+                <span id="insight-weekday-text">Weekday Avg: $0.00/day</span>
+                <span id="insight-weekend-text">Weekend Avg: $0.00/day</span>
+              </div>
+            </div>
+
+            <!-- Largest Single Expense -->
+            <div class="p-4 bg-indigo-50/50 rounded-xl border border-indigo-100 flex items-start gap-3">
+              <div class="w-9 h-9 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center flex-shrink-0 text-base">
+                🎯
+              </div>
+              <div class="flex-1">
+                <span class="text-[11px] font-bold text-indigo-700 uppercase tracking-wider">Largest Single Expense</span>
+                <h4 id="insight-largest-title" class="text-xs font-bold text-slate-900 mt-0.5">None logged yet</h4>
+                <p id="insight-largest-desc" class="text-[11px] text-slate-500 mt-0.5">Tracks your highest impact student expense.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Bottom Pro-Tip -->
+          <div class="mt-4 pt-3 border-t border-slate-100 flex items-center gap-2 text-xs text-slate-500">
+            <span class="text-indigo-600 font-bold">Pro Tip:</span>
+            <span>Check out the Savings Tips tab for campus meal-prep & software discount simulators!</span>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- ========================================== -->
+    <!-- TAB 3: STUDENT SAVINGS TIPS & HACKS        -->
+    <!-- ========================================== -->
+    <div id="tab-savings" class="space-y-6 hidden">
+      
+      <!-- Habit Savings Simulator Card -->
+      <div class="zg-card bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="text-xl">🧮</span>
+              <h3 class="text-base font-bold text-slate-900">Campus Habit Savings Simulator</h3>
+            </div>
+            <p class="text-xs text-slate-500 mt-0.5">Toggle realistic student lifestyle adjustments to view projected monthly and semester savings</p>
+          </div>
+          
+          <!-- Live Savings Total Pill -->
+          <div class="bg-gradient-to-r from-emerald-500 to-teal-600 text-white p-3 rounded-2xl shadow-md shadow-emerald-100 flex items-center gap-4">
+            <div>
+              <span class="text-[10px] uppercase font-bold text-emerald-100 tracking-wider block">Projected Monthly</span>
+              <span id="sim-monthly-total" class="text-xl font-black">$0.00</span>
+            </div>
+            <div class="border-l border-emerald-400/40 pl-4">
+              <span class="text-[10px] uppercase font-bold text-emerald-100 tracking-wider block">Semester (4 Mo)</span>
+              <span id="sim-semester-total" class="text-xl font-black">$0.00</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Simulator Toggles Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          
+          <label class="p-3.5 border border-slate-200 rounded-xl hover:border-indigo-300 transition-all cursor-pointer flex items-start gap-3 bg-slate-50/50 hover:bg-white group">
+            <input type="checkbox" id="sim-lunch" onchange="calculateSimulator()" class="mt-1 w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500">
+            <div>
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-slate-800 group-hover:text-indigo-600">🥪 Batch-Prep 2 Lunches/Wk</span>
+                <span class="text-[11px] font-bold text-emerald-600">+$120/mo</span>
+              </div>
+              <p class="text-[11px] text-slate-500 mt-0.5">Cook extra rice, pasta, or sandwiches instead of cafeteria combo lines twice a week.</p>
+            </div>
+          </label>
+
+          <label class="p-3.5 border border-slate-200 rounded-xl hover:border-indigo-300 transition-all cursor-pointer flex items-start gap-3 bg-slate-50/50 hover:bg-white group">
+            <input type="checkbox" id="sim-books" onchange="calculateSimulator()" class="mt-1 w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500">
+            <div>
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-slate-800 group-hover:text-indigo-600">📚 Rent Digital / Library Reserves</span>
+                <span class="text-[11px] font-bold text-emerald-600">+$30/mo</span>
+              </div>
+              <p class="text-[11px] text-slate-500 mt-0.5">Use 2-hour library reserve copies and scan chapters instead of buying new hardcovers.</p>
+            </div>
+          </label>
+
+          <label class="p-3.5 border border-slate-200 rounded-xl hover:border-indigo-300 transition-all cursor-pointer flex items-start gap-3 bg-slate-50/50 hover:bg-white group">
+            <input type="checkbox" id="sim-edu" onchange="calculateSimulator()" class="mt-1 w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500">
+            <div>
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-slate-800 group-hover:text-indigo-600">💻 .edu Student Tech Perks</span>
+                <span class="text-[11px] font-bold text-emerald-600">+$45/mo</span>
+              </div>
+              <p class="text-[11px] text-slate-500 mt-0.5">Activate GitHub Student Pack, Spotify/Hulu $5.99 plan, Notion Pro, and Prime Student.</p>
+            </div>
+          </label>
+
+          <label class="p-3.5 border border-slate-200 rounded-xl hover:border-indigo-300 transition-all cursor-pointer flex items-start gap-3 bg-slate-50/50 hover:bg-white group">
+            <input type="checkbox" id="sim-coffee" onchange="calculateSimulator()" class="mt-1 w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500">
+            <div>
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-slate-800 group-hover:text-indigo-600">☕ Home-Brew Dorm Coffee</span>
+                <span class="text-[11px] font-bold text-emerald-600">+$100/mo</span>
+              </div>
+              <p class="text-[11px] text-slate-500 mt-0.5">Use French press or Aeropress in dorm instead of daily $5 iced caramel macchiatos.</p>
+            </div>
+          </label>
+
+          <label class="p-3.5 border border-slate-200 rounded-xl hover:border-indigo-300 transition-all cursor-pointer flex items-start gap-3 bg-slate-50/50 hover:bg-white group">
+            <input type="checkbox" id="sim-transit" onchange="calculateSimulator()" class="mt-1 w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500">
+            <div>
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-slate-800 group-hover:text-indigo-600">🚲 Campus Shuttle & Biking</span>
+                <span class="text-[11px] font-bold text-emerald-600">+$80/mo</span>
+              </div>
+              <p class="text-[11px] text-slate-500 mt-0.5">Replace short-distance Uber/Lyft surge rides with free university shuttles or bike.</p>
+            </div>
+          </label>
+
+          <label class="p-3.5 border border-slate-200 rounded-xl hover:border-indigo-300 transition-all cursor-pointer flex items-start gap-3 bg-slate-50/50 hover:bg-white group">
+            <input type="checkbox" id="sim-roommate" onchange="calculateSimulator()" class="mt-1 w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500">
+            <div>
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-slate-800 group-hover:text-indigo-600">🤝 Roommate Bulk Pantry Buys</span>
+                <span class="text-[11px] font-bold text-emerald-600">+$60/mo</span>
+              </div>
+              <p class="text-[11px] text-slate-500 mt-0.5">Split Costco/Sam's club basics (toilet paper, detergent, cooking oil, rice) with dorm-mates.</p>
+            </div>
+          </label>
+
+        </div>
+
+        <!-- Equivalent Campus Impact Output -->
+        <div id="sim-impact-banner" class="mt-4 p-3.5 bg-indigo-50/60 rounded-xl border border-indigo-100 flex items-center gap-3 text-xs text-indigo-900">
+          <span class="text-lg">💡</span>
+          <span id="sim-impact-text">Select one or more habits above to project your student savings!</span>
+        </div>
+      </div>
+
+      <!-- Real-Time Spending Heuristics & AI Advisor -->
+      <div class="zg-card bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm">
+        <div class="flex items-center gap-2 mb-4">
+          <div class="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold text-sm">
+            AI
+          </div>
+          <div>
+            <h3 class="text-sm font-bold text-slate-900">Heuristics & Campus Financial Advisor</h3>
+            <p class="text-xs text-slate-500">Real-time dynamic recommendations tailored to your logged transactions</p>
+          </div>
+        </div>
+
+        <div id="heuristics-container" class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <!-- Dynamic cards injected based on expenses -->
+        </div>
+      </div>
+
+      <!-- Campus Hacks Directory -->
+      <div class="zg-card bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm">
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <h3 class="text-sm font-bold text-slate-900">Curated Campus Hacks Directory</h3>
+            <p class="text-xs text-slate-500">Battle-tested strategies used by frugal college students</p>
+          </div>
+          <span class="text-xs bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full font-semibold">Verified Tactics</span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div class="p-4 bg-slate-50 rounded-xl border border-slate-200/70 hover:border-indigo-200 transition-all">
+            <span class="text-2xl mb-2 block">📖</span>
+            <h4 class="text-xs font-bold text-slate-900">Library Course Reserves</h4>
+            <p class="text-[11px] text-slate-500 mt-1 leading-relaxed">
+              University libraries store physical copies of textbook syllabi behind circulation. Check them out for 2–4 hours and use scanner stations to save PDFs cleanly.
+            </p>
+          </div>
+
+          <div class="p-4 bg-slate-50 rounded-xl border border-slate-200/70 hover:border-indigo-200 transition-all">
+            <span class="text-2xl mb-2 block">🚌</span>
+            <h4 class="text-xs font-bold text-slate-900">Subsidized Transit Stickers</h4>
+            <p class="text-[11px] text-slate-500 mt-1 leading-relaxed">
+              Student union offices often offer semester bus/light-rail validation stickers for $10 or free. Validates unlimited city-wide rides without refilling transit cards.
+            </p>
+          </div>
+
+          <div class="p-4 bg-slate-50 rounded-xl border border-slate-200/70 hover:border-indigo-200 transition-all">
+            <span class="text-2xl mb-2 block">🥫</span>
+            <h4 class="text-xs font-bold text-slate-900">Campus Food Pantries</h4>
+            <p class="text-[11px] text-slate-500 mt-1 leading-relaxed">
+              Nearly all universities run discreet, zero-judgment student food banks stocked with fresh produce, protein bars, pasta, and emergency meal swipes.
+            </p>
+          </div>
+
+          <div class="p-4 bg-slate-50 rounded-xl border border-slate-200/70 hover:border-indigo-200 transition-all">
+            <span class="text-2xl mb-2 block">🖨️</span>
+            <h4 class="text-xs font-bold text-slate-900">Department Free Printing</h4>
+            <p class="text-[11px] text-slate-500 mt-1 leading-relaxed">
+              Skip commercial print shops: academic department computer labs (Engineering, English, Business) routinely include 250+ complimentary print pages per term.
+            </p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="mt-auto border-t border-slate-200 bg-white py-6 text-center text-xs text-slate-500">
+    <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+      <div class="flex items-center gap-2">
+        <span class="font-bold text-slate-700">CampusSpend</span>
+        <span>•</span>
+        <span>Hacktoberfest Student Financial Ledger</span>
+      </div>
+      <div class="flex items-center gap-4 text-[11px]">
+        <button onclick="openAntigravityModal()" class="text-indigo-600 hover:underline">xkcd #353 Python Tribute</button>
+        <span>•</span>
+        <button onclick="toggleZeroGravity()" class="text-indigo-600 hover:underline">Zero-Gravity Mode</button>
+        <span>•</span>
+        <span>Offline-First (localStorage)</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ========================================== -->
+  <!-- MODALS                                     -->
+  <!-- ========================================== -->
+
+  <!-- 1. Add / Edit Expense Modal -->
+  <div id="modal-expense" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 relative animate-in fade-in zoom-in-95 duration-150">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+        <h3 id="modal-expense-title" class="text-sm font-bold text-slate-900">Log Daily Expense</h3>
+        <button onclick="closeExpenseModal()" class="text-slate-400 hover:text-slate-600">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <form id="expense-form" onsubmit="handleSaveExpense(event)" class="mt-4 space-y-3.5 text-xs">
+        <input type="hidden" id="form-expense-id">
+
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">Description *</label>
+          <input type="text" id="form-desc" required placeholder="e.g., Campus Cafeteria Lunch" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">Amount ($) *</label>
+            <input type="number" step="0.01" min="0.01" id="form-amount" required placeholder="0.00" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 font-semibold">
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">Date *</label>
+            <input type="date" id="form-date" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">Category *</label>
+            <select id="form-category" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+              <option value="Food & Groceries">Food & Groceries</option>
+              <option value="Tuition & Books">Tuition & Books</option>
+              <option value="Rent & Housing">Rent & Housing</option>
+              <option value="Entertainment">Entertainment</option>
+              <option value="Tech & Subscriptions">Tech & Subscriptions</option>
+              <option value="Transit">Transit</option>
+              <option value="Health">Health</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">Payment Method *</label>
+            <select id="form-payment" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+              <option value="Campus ID Card">Campus ID Card</option>
+              <option value="Debit">Debit</option>
+              <option value="Venmo / UPI">Venmo / UPI</option>
+              <option value="Cash">Cash</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">Tags (comma-separated)</label>
+          <input type="text" id="form-tags" placeholder="e.g., #dining-hall, #study, #roommate" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        </div>
+
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">Notes (Optional)</label>
+          <textarea id="form-notes" rows="2" placeholder="Split with Alex, saved receipt..." class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+        </div>
+
+        <div class="pt-3 flex gap-2 justify-end">
+          <button type="button" onclick="closeExpenseModal()" class="px-4 py-2 border border-slate-200 rounded-xl text-slate-600 hover:bg-slate-50 font-semibold">Cancel</button>
+          <button type="submit" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-semibold shadow-sm">Save Expense</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 2. Monthly Budget Settings Modal -->
+  <div id="modal-budget" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 relative">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+        <h3 class="text-sm font-bold text-slate-900">Monthly Budget & Category Allocations</h3>
+        <button onclick="closeBudgetModal()" class="text-slate-400 hover:text-slate-600">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <div class="mt-4 space-y-3.5 text-xs">
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">Overall Monthly Cap ($)</label>
+          <input type="number" id="budget-input-total" min="50" step="10" class="w-full px-3 py-2 text-sm font-bold bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500">
+          <p class="text-[11px] text-slate-400 mt-1">Total spending ceiling for the safe burn rate calculation</p>
+        </div>
+
+        <div class="pt-2 border-t border-slate-100">
+          <span class="block font-bold text-slate-700 uppercase tracking-wider text-[10px] mb-2">Category Allocations ($)</span>
+          <div class="space-y-2 max-h-56 overflow-y-auto pr-1" id="budget-category-inputs">
+            <!-- Dynamically populated category budget fields -->
+          </div>
+        </div>
+
+        <div class="pt-3 flex gap-2 justify-end">
+          <button type="button" onclick="closeBudgetModal()" class="px-4 py-2 border border-slate-200 rounded-xl text-slate-600 hover:bg-slate-50 font-semibold">Cancel</button>
+          <button type="button" onclick="saveBudgetSettings()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-semibold shadow-sm">Save Budget</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. Antigravity Python Shell & Easter Egg Modal (xkcd #353) -->
+  <div id="modal-antigravity" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md hidden flex items-center justify-center p-4">
+    <div class="bg-slate-900 text-slate-100 rounded-2xl max-w-2xl w-full p-6 shadow-2xl border border-slate-800 relative font-mono text-xs">
+      
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+        <div class="flex items-center gap-2">
+          <span class="w-3 h-3 rounded-full bg-rose-500 inline-block"></span>
+          <span class="w-3 h-3 rounded-full bg-amber-500 inline-block"></span>
+          <span class="w-3 h-3 rounded-full bg-emerald-500 inline-block"></span>
+          <span class="ml-2 font-bold text-slate-300">python3 - antigravity interactive shell</span>
+        </div>
+        <button onclick="closeAntigravityModal()" class="text-slate-400 hover:text-white">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <!-- Comic Lore Spotlight -->
+      <div class="mt-4 p-3 bg-indigo-950/50 rounded-xl border border-indigo-900/60 flex items-center gap-3">
+        <div class="text-2xl">✨</div>
+        <div class="text-[11px] font-sans text-indigo-200 leading-relaxed">
+          <strong>The Legend of xkcd #353:</strong> In Python, executing <code class="bg-indigo-900 px-1.5 py-0.5 rounded text-amber-300 font-mono">import antigravity</code> opens Randall Munroe's classic comic where Python confers the power of flight. Try typing it below!
+        </div>
+      </div>
+
+      <!-- Terminal Output Screen -->
+      <div id="terminal-screen" class="mt-3 bg-black/70 p-4 rounded-xl border border-slate-800 h-64 overflow-y-auto space-y-1 text-slate-300 font-mono">
+        <div class="text-emerald-400 font-semibold">Python 3.12.0 (CampusSpend Interactive Shell, Oct 2026)</div>
+        <div class="text-slate-500">Type "help()", "expenses()", "burn_rate()", or "import antigravity" for commands.</div>
+        <div class="text-slate-600">----------------------------------------------------------------------</div>
+      </div>
+
+      <!-- Terminal Input Line -->
+      <form onsubmit="handleTerminalSubmit(event)" class="mt-3 flex items-center gap-2 bg-black/60 px-3 py-2 rounded-xl border border-slate-800">
+        <span class="text-emerald-400 font-bold select-none">&gt;&gt;&gt;</span>
+        <input type="text" id="terminal-input" autocomplete="off" spellcheck="false" placeholder="import antigravity" class="flex-1 bg-transparent text-emerald-300 outline-none font-mono text-xs">
+        <button type="submit" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-[11px]">Run</button>
+      </form>
+
+      <!-- Bottom actions -->
+      <div class="mt-4 flex items-center justify-between font-sans text-[11px] text-slate-400">
+        <button onclick="runTerminalCmd('import antigravity')" class="text-indigo-400 hover:underline">1-Click: import antigravity</button>
+        <a href="https://xkcd.com/353/" target="_blank" rel="noopener noreferrer" class="text-amber-400 hover:underline flex items-center gap-1">
+          <span>Read original xkcd #353 comic</span>
+          <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+        </a>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- JAVASCRIPT APPLICATION LOGIC               -->
+  <!-- ========================================== -->
+  <script>
+    // --- Application State ---
+    const STORAGE_KEY_EXPENSES = 'campus_spend_expenses_v1';
+    const STORAGE_KEY_BUDGET = 'campus_spend_budget_v1';
+    const STORAGE_KEY_SIM = 'campus_spend_sim_v1';
+    const STORAGE_KEY_ZG = 'campus_spend_zg_v1';
+
+    const CATEGORIES = [
+      { name: 'Food & Groceries', color: '#6366f1', defaultCap: 250 },
+      { name: 'Tuition & Books', color: '#8b5cf6', defaultCap: 180 },
+      { name: 'Rent & Housing', color: '#ec4899', defaultCap: 220 },
+      { name: 'Entertainment', color: '#f59e0b', defaultCap: 70 },
+      { name: 'Tech & Subscriptions', color: '#06b6d4', defaultCap: 30 },
+      { name: 'Transit', color: '#10b981', defaultCap: 50 },
+      { name: 'Health', color: '#ef4444', defaultCap: 50 },
+      { name: 'Other', color: '#64748b', defaultCap: 0 }
+    ];
+
+    let expenses = [];
+    let budgetConfig = {
+      totalMonthly: 850,
+      categories: {
+        'Food & Groceries': 250,
+        'Tuition & Books': 180,
+        'Rent & Housing': 220,
+        'Entertainment': 70,
+        'Tech & Subscriptions': 30,
+        'Transit': 50,
+        'Health': 50,
+        'Other': 0
+      }
+    };
+    let isZeroGravity = false;
+    let currentTab = 'ledger';
+
+    // --- Sample Realistic Student Data ---
+    const SAMPLE_EXPENSES = [
+      { id: 'exp-1', desc: 'Campus Cafeteria Lunch', amount: 12.50, category: 'Food & Groceries', date: getRecentDate(1), paymentMethod: 'Campus ID Card', notes: 'Chicken wrap + iced tea', tags: '#cafeteria, #lunch' },
+      { id: 'exp-2', desc: 'Textbook Rental (Calculus III)', amount: 35.00, category: 'Tuition & Books', date: getRecentDate(2), paymentMethod: 'Debit', notes: 'Digital 120-day semester license', tags: '#books, #stem' },
+      { id: 'exp-3', desc: 'Subway / Metro Monthly Pass', amount: 45.00, category: 'Transit', date: getRecentDate(4), paymentMethod: 'Campus ID Card', notes: 'Student discount card reload', tags: '#transit, #commute' },
+      { id: 'exp-4', desc: 'Trader Joe\'s Dorm Groceries', amount: 48.20, category: 'Food & Groceries', date: getRecentDate(5), paymentMethod: 'Debit', notes: 'Oats, milk, Greek yogurt, fruit', tags: '#dorm, #groceries' },
+      { id: 'exp-5', desc: 'Iced Coffee & Study Bagel', amount: 6.75, category: 'Food & Groceries', date: getRecentDate(6), paymentMethod: 'Venmo / UPI', notes: 'Library cafe mid-terms grind', tags: '#study, #coffee' },
+      { id: 'exp-6', desc: 'Dorm Wi-Fi & Utility Split', amount: 28.50, category: 'Rent & Housing', date: getRecentDate(7), paymentMethod: 'Venmo / UPI', notes: 'Split 4 ways with flatmates', tags: '#housing, #split' },
+      { id: 'exp-7', desc: 'Spotify + Hulu Student Bundle', amount: 5.99, category: 'Tech & Subscriptions', date: getRecentDate(8), paymentMethod: 'Debit', notes: '.edu student verified rate', tags: '#perks, #streaming' },
+      { id: 'exp-8', desc: 'Campus Pharmacy Cold Medicine', amount: 14.80, category: 'Health', date: getRecentDate(10), paymentMethod: 'Campus ID Card', notes: 'Vitamins & lozenges', tags: '#health' },
+      { id: 'exp-9', desc: 'Late Night Pizza Slice', amount: 4.50, category: 'Food & Groceries', date: getRecentDate(11), paymentMethod: 'Cash', notes: 'Hackathon fuel', tags: '#pizza, #snack' },
+      { id: 'exp-10', desc: 'Campus Cinema Student Ticket', amount: 8.00, category: 'Entertainment', date: getRecentDate(12), paymentMethod: 'Debit', notes: 'Friday night movie with dorm friends', tags: '#weekend, #movie' }
+    ];
+
+    function getRecentDate(daysAgo) {
+      const d = new Date();
+      d.setDate(d.getDate() - daysAgo);
+      return d.toISOString().split('T')[0];
+    }
+
+    // --- Initialization ---
+    window.addEventListener('DOMContentLoaded', () => {
+      loadStorage();
+      initDateInput();
+      renderAll();
+      initZeroGravity();
+    });
+
+    function loadStorage() {
+      try {
+        const storedExpenses = localStorage.getItem(STORAGE_KEY_EXPENSES);
+        if (storedExpenses) {
+          expenses = JSON.parse(storedExpenses);
+        } else {
+          expenses = [...SAMPLE_EXPENSES];
+          saveExpenses();
+        }
+
+        const storedBudget = localStorage.getItem(STORAGE_KEY_BUDGET);
+        if (storedBudget) {
+          budgetConfig = JSON.parse(storedBudget);
+        }
+
+        const storedZG = localStorage.getItem(STORAGE_KEY_ZG);
+        if (storedZG === 'true') {
+          isZeroGravity = true;
+        }
+      } catch (e) {
+        console.error('Storage parse error', e);
+        expenses = [...SAMPLE_EXPENSES];
+      }
+    }
+
+    function saveExpenses() {
+      localStorage.setItem(STORAGE_KEY_EXPENSES, JSON.stringify(expenses));
+    }
+
+    function saveBudget() {
+      localStorage.setItem(STORAGE_KEY_BUDGET, JSON.stringify(budgetConfig));
+    }
+
+    function initDateInput() {
+      const today = new Date().toISOString().split('T')[0];
+      const dateEl = document.getElementById('form-date');
+      if (dateEl) dateEl.value = today;
+    }
+
+    // --- Master Render Pipeline ---
+    function renderAll() {
+      updateTopMetrics();
+      renderLedger();
+      renderCharts();
+      renderHeuristics();
+      calculateSimulator();
+      updateZeroGravityUI();
+    }
+
+    // --- Navigation Tabs ---
+    function switchTab(tabId) {
+      currentTab = tabId;
+      ['ledger', 'charts', 'savings'].forEach(t => {
+        const pageEl = document.getElementById(`tab-${t}`);
+        const navDesktop = document.getElementById(`nav-btn-${t}`);
+        const navMobile = document.getElementById(`mob-nav-${t}`);
+
+        if (t === tabId) {
+          pageEl.classList.remove('hidden');
+          if (navDesktop) {
+            navDesktop.className = 'nav-tab flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all bg-white text-indigo-600 shadow-sm';
+          }
+          if (navMobile) {
+            navMobile.className = 'px-3 py-1.5 text-xs font-semibold rounded-lg bg-indigo-50 text-indigo-700';
+          }
+        } else {
+          pageEl.classList.add('hidden');
+          if (navDesktop) {
+            navDesktop.className = 'nav-tab flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all text-slate-600 hover:text-slate-900';
+          }
+          if (navMobile) {
+            navMobile.className = 'px-3 py-1.5 text-xs font-semibold rounded-lg text-slate-600';
+          }
+        }
+      });
+
+      if (tabId === 'charts') {
+        renderCharts();
+      }
+    }
+
+    // --- Top Metrics (Cushion Gauge, Burn Rate, Health Score) ---
+    function updateTopMetrics() {
+      const now = new Date();
+      const currentYear = now.getFullYear();
+      const currentMonth = now.getMonth();
+      const totalDaysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+      const currentDay = now.getDate();
+      const daysRemaining = Math.max(1, totalDaysInMonth - currentDay + 1);
+
+      // Total spent this current month
+      const currentMonthStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
+      const monthExpenses = expenses.filter(e => e.date.startsWith(currentMonthStr));
+      const totalSpent = monthExpenses.reduce((sum, e) => sum + Number(e.amount), 0);
+
+      const budgetCap = budgetConfig.totalMonthly || 850;
+      const cushionRemaining = Math.max(0, budgetCap - totalSpent);
+      const cushionPct = Math.min(100, (totalSpent / budgetCap) * 100);
+
+      // Safe daily burn rate
+      const safeDailyBurn = (cushionRemaining / daysRemaining);
+
+      // Financial Health Score (0 - 100)
+      // Factors: cushion ratio left vs month progression ratio
+      const monthProgressRatio = currentDay / totalDaysInMonth;
+      const spendProgressRatio = totalSpent / budgetCap;
+      let healthScore = 100;
+      if (spendProgressRatio > monthProgressRatio) {
+        // spending faster than calendar
+        const overPace = (spendProgressRatio - monthProgressRatio) * 100;
+        healthScore = Math.max(15, Math.round(100 - overPace * 1.5));
+      } else {
+        healthScore = Math.min(100, Math.round(85 + (monthProgressRatio - spendProgressRatio) * 40));
+      }
+
+      // Update DOM
+      document.getElementById('metric-total-spent').innerText = `$${totalSpent.toFixed(2)}`;
+      document.getElementById('metric-budget-cap').innerText = `$${budgetCap.toFixed(2)}`;
+      document.getElementById('metric-cushion-rem').innerText = `$${cushionRemaining.toFixed(2)}`;
+      
+      const progressBar = document.getElementById('cushion-progress-bar');
+      progressBar.style.width = `${cushionPct}%`;
+      if (cushionPct > 90) {
+        progressBar.className = 'bg-rose-500 h-2 rounded-full transition-all duration-500';
+        document.getElementById('metric-cushion-rem').className = 'font-bold text-rose-600';
+      } else if (cushionPct > 70) {
+        progressBar.className = 'bg-amber-500 h-2 rounded-full transition-all duration-500';
+        document.getElementById('metric-cushion-rem').className = 'font-bold text-amber-600';
+      } else {
+        progressBar.className = 'bg-indigo-600 h-2 rounded-full transition-all duration-500';
+        document.getElementById('metric-cushion-rem').className = 'font-bold text-emerald-600';
+      }
+
+      document.getElementById('metric-burn-rate').innerText = `$${safeDailyBurn.toFixed(2)}`;
+      document.getElementById('metric-days-left').innerText = `${daysRemaining} days`;
+
+      const healthEl = document.getElementById('metric-health-score');
+      const healthLabel = document.getElementById('metric-health-label');
+      healthEl.innerText = healthScore;
+
+      if (healthScore >= 80) {
+        healthEl.className = 'text-2xl font-black text-emerald-600';
+        healthLabel.className = 'font-bold text-emerald-600';
+        healthLabel.innerText = 'Comfortable Buffer 🟢';
+      } else if (healthScore >= 50) {
+        healthEl.className = 'text-2xl font-black text-amber-600';
+        healthLabel.className = 'font-bold text-amber-600';
+        healthLabel.innerText = 'Moderate Pace 🟡';
+      } else {
+        healthEl.className = 'text-2xl font-black text-rose-600';
+        healthLabel.className = 'font-bold text-rose-600';
+        healthLabel.innerText = 'Budget Warning 🔴';
+      }
+
+      document.getElementById('metric-trans-count').innerText = `${expenses.length} Items`;
+    }
+
+    // --- Tab 1: Ledger Operations ---
+    function renderLedger() {
+      const search = (document.getElementById('search-input').value || '').toLowerCase().trim();
+      const filterCat = document.getElementById('filter-category').value;
+      const filterPay = document.getElementById('filter-payment').value;
+      const sortOrder = document.getElementById('sort-order').value;
+
+      let filtered = expenses.filter(item => {
+        if (filterCat !== 'ALL' && item.category !== filterCat) return false;
+        if (filterPay !== 'ALL' && item.paymentMethod !== filterPay) return false;
+        if (search) {
+          const matchDesc = item.desc.toLowerCase().includes(search);
+          const matchNote = (item.notes || '').toLowerCase().includes(search);
+          const matchTag = (item.tags || '').toLowerCase().includes(search);
+          const matchCat = item.category.toLowerCase().includes(search);
+          if (!matchDesc && !matchNote && !matchTag && !matchCat) return false;
+        }
+        return true;
+      });
+
+      // Sorting
+      filtered.sort((a, b) => {
+        if (sortOrder === 'date-desc') return new Date(b.date) - new Date(a.date);
+        if (sortOrder === 'date-asc') return new Date(a.date) - new Date(b.date);
+        if (sortOrder === 'amt-desc') return Number(b.amount) - Number(a.amount);
+        if (sortOrder === 'amt-asc') return Number(a.amount) - Number(b.amount);
+        return 0;
+      });
+
+      const tbody = document.getElementById('ledger-table-body');
+      const emptyState = document.getElementById('ledger-empty-state');
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = '';
+        emptyState.classList.remove('hidden');
+        return;
+      }
+
+      emptyState.classList.add('hidden');
+      tbody.innerHTML = filtered.map(item => {
+        const catObj = CATEGORIES.find(c => c.name === item.category) || { color: '#6366f1' };
+        const tags = (item.tags || '').split(',').map(t => t.trim()).filter(Boolean);
+
+        return `
+          <tr class="hover:bg-slate-50/70 transition-colors">
+            <td class="py-3 px-4 font-mono text-[11px] text-slate-500 whitespace-nowrap">${escapeHtml(item.date)}</td>
+            <td class="py-3 px-4">
+              <span class="font-bold text-slate-900">${escapeHtml(item.desc)}</span>
+            </td>
+            <td class="py-3 px-4">
+              <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold" style="background-color: ${catObj.color}15; color: ${catObj.color}">
+                <span class="w-1.5 h-1.5 rounded-full" style="background-color: ${catObj.color}"></span>
+                ${escapeHtml(item.category)}
+              </span>
+            </td>
+            <td class="py-3 px-4 whitespace-nowrap">
+              <span class="text-slate-600 bg-slate-100 px-2 py-0.5 rounded text-[11px] font-medium">${escapeHtml(item.paymentMethod)}</span>
+            </td>
+            <td class="py-3 px-4 max-w-xs">
+              <div class="flex flex-wrap gap-1">
+                ${tags.map(t => `<span class="bg-indigo-50 text-indigo-700 text-[10px] px-1.5 py-0.2 rounded font-mono">${escapeHtml(t)}</span>`).join('')}
+              </div>
+              ${item.notes ? `<p class="text-[11px] text-slate-400 mt-0.5 italic truncate">${escapeHtml(item.notes)}</p>` : ''}
+            </td>
+            <td class="py-3 px-4 text-right font-black text-slate-900 font-mono text-xs whitespace-nowrap">
+              $${Number(item.amount).toFixed(2)}
+            </td>
+            <td class="py-3 px-4 text-center whitespace-nowrap">
+              <div class="flex items-center justify-center gap-1">
+                <button onclick="openEditModal('${item.id}')" title="Edit expense" class="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                </button>
+                <button onclick="deleteExpense('${item.id}')" title="Delete expense" class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                </button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function quickAdd(desc, amount, category, paymentMethod, notes, tags) {
+      const today = new Date().toISOString().split('T')[0];
+      const newExp = {
+        id: 'exp-' + Date.now(),
+        desc,
+        amount: Number(amount),
+        category,
+        date: today,
+        paymentMethod,
+        notes,
+        tags
+      };
+      expenses.unshift(newExp);
+      saveExpenses();
+      renderAll();
+      showToast(`Logged "${desc}" ($${amount.toFixed(2)})`);
+    }
+
+    function openAddModal() {
+      document.getElementById('form-expense-id').value = '';
+      document.getElementById('modal-expense-title').innerText = 'Log Daily Expense';
+      document.getElementById('form-desc').value = '';
+      document.getElementById('form-amount').value = '';
+      document.getElementById('form-category').value = 'Food & Groceries';
+      document.getElementById('form-payment').value = 'Campus ID Card';
+      document.getElementById('form-tags').value = '';
+      document.getElementById('form-notes').value = '';
+      initDateInput();
+      document.getElementById('modal-expense').classList.remove('hidden');
+    }
+
+    function openEditModal(id) {
+      const item = expenses.find(e => e.id === id);
+      if (!item) return;
+
+      document.getElementById('form-expense-id').value = item.id;
+      document.getElementById('modal-expense-title').innerText = 'Edit Expense';
+      document.getElementById('form-desc').value = item.desc;
+      document.getElementById('form-amount').value = item.amount;
+      document.getElementById('form-category').value = item.category;
+      document.getElementById('form-date').value = item.date;
+      document.getElementById('form-payment').value = item.paymentMethod;
+      document.getElementById('form-tags').value = item.tags || '';
+      document.getElementById('form-notes').value = item.notes || '';
+      document.getElementById('modal-expense').classList.remove('hidden');
+    }
+
+    function closeExpenseModal() {
+      document.getElementById('modal-expense').classList.add('hidden');
+    }
+
+    function handleSaveExpense(event) {
+      event.preventDefault();
+      const editId = document.getElementById('form-expense-id').value;
+      const desc = document.getElementById('form-desc').value.trim();
+      const amount = parseFloat(document.getElementById('form-amount').value);
+      const date = document.getElementById('form-date').value;
+      const category = document.getElementById('form-category').value;
+      const paymentMethod = document.getElementById('form-payment').value;
+      const tags = document.getElementById('form-tags').value.trim();
+      const notes = document.getElementById('form-notes').value.trim();
+
+      if (!desc || isNaN(amount) || amount <= 0 || !date) {
+        alert('Please fill out all required fields with valid values.');
+        return;
+      }
+
+      if (editId) {
+        // Edit existing
+        const index = expenses.findIndex(e => e.id === editId);
+        if (index !== -1) {
+          expenses[index] = { id: editId, desc, amount, date, category, paymentMethod, tags, notes };
+        }
+      } else {
+        // Add new
+        expenses.unshift({
+          id: 'exp-' + Date.now(),
+          desc,
+          amount,
+          date,
+          category,
+          paymentMethod,
+          tags,
+          notes
+        });
+      }
+
+      saveExpenses();
+      renderAll();
+      closeExpenseModal();
+      showToast(editId ? 'Expense updated' : 'Expense recorded');
+    }
+
+    function deleteExpense(id) {
+      if (confirm('Delete this expense entry?')) {
+        expenses = expenses.filter(e => e.id !== id);
+        saveExpenses();
+        renderAll();
+        showToast('Expense removed');
+      }
+    }
+
+    function resetDataConfirm() {
+      if (confirm('Clear all recorded expenses? This cannot be undone.')) {
+        expenses = [];
+        saveExpenses();
+        renderAll();
+        showToast('Ledger cleared');
+      }
+    }
+
+    function loadSampleData() {
+      expenses = [...SAMPLE_EXPENSES];
+      saveExpenses();
+      renderAll();
+      showToast('Loaded 10 student sample expenses!');
+    }
+
+    // --- CSV & JSON Export / Import ---
+    function exportToCSV() {
+      if (expenses.length === 0) {
+        alert('No expenses to export.');
+        return;
+      }
+      const headers = ['ID', 'Date', 'Description', 'Amount', 'Category', 'PaymentMethod', 'Tags', 'Notes'];
+      const rows = expenses.map(e => [
+        `"${e.id}"`,
+        `"${e.date}"`,
+        `"${(e.desc || '').replace(/"/g, '""')}"`,
+        e.amount,
+        `"${e.category}"`,
+        `"${e.paymentMethod}"`,
+        `"${(e.tags || '').replace(/"/g, '""')}"`,
+        `"${(e.notes || '').replace(/"/g, '""')}"`
+      ]);
+      const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement('a');
+      link.setAttribute('href', encodedUri);
+      link.setAttribute('download', `campus_expenses_${new Date().toISOString().split('T')[0]}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    function exportToJSON() {
+      if (expenses.length === 0) {
+        alert('No expenses to export.');
+        return;
+      }
+      const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(expenses, null, 2));
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute('href', dataStr);
+      downloadAnchor.setAttribute('download', `campus_expenses_${new Date().toISOString().split('T')[0]}.json`);
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+    }
+
+    function importExpenses(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const content = e.target.result;
+          if (file.name.endsWith('.json')) {
+            const parsed = JSON.parse(content);
+            if (Array.isArray(parsed)) {
+              expenses = parsed;
+              saveExpenses();
+              renderAll();
+              showToast(`Imported ${parsed.length} expenses from JSON!`);
+            }
+          } else if (file.name.endsWith('.csv')) {
+            const lines = content.split('\n').filter(Boolean);
+            if (lines.length > 1) {
+              const newItems = [];
+              for (let i = 1; i < lines.length; i++) {
+                const parts = lines[i].split(',').map(p => p.trim().replace(/^"|"$/g, ''));
+                if (parts.length >= 4) {
+                  newItems.push({
+                    id: parts[0] || 'exp-' + (Date.now() + i),
+                    date: parts[1] || new Date().toISOString().split('T')[0],
+                    desc: parts[2] || 'Imported Expense',
+                    amount: parseFloat(parts[3]) || 0,
+                    category: parts[4] || 'Other',
+                    paymentMethod: parts[5] || 'Debit',
+                    tags: parts[6] || '',
+                    notes: parts[7] || ''
+                  });
+                }
+              }
+              if (newItems.length > 0) {
+                expenses = newItems;
+                saveExpenses();
+                renderAll();
+                showToast(`Imported ${newItems.length} expenses from CSV!`);
+              }
+            }
+          }
+        } catch (err) {
+          alert('Could not parse file. Please verify JSON/CSV format.');
+          console.error(err);
+        }
+      };
+      reader.readAsText(file);
+      event.target.value = '';
+    }
+
+    // --- Tab 2: Charts & Visual Analytics ---
+    function renderCharts() {
+      renderCategoryDonut();
+      renderTrajectoryChart();
+      renderVarianceBars();
+      renderHabitInsights();
+    }
+
+    function renderCategoryDonut() {
+      const svg = document.getElementById('donut-svg');
+      const legendList = document.getElementById('category-legend-list');
+      const totalPill = document.getElementById('chart-total-pill');
+      const centerCat = document.getElementById('donut-center-category');
+      const centerAmt = document.getElementById('donut-center-amount');
+
+      // Aggregate totals per category
+      const totals = {};
+      CATEGORIES.forEach(c => totals[c.name] = 0);
+      let grandTotal = 0;
+
+      expenses.forEach(e => {
+        const cat = e.category || 'Other';
+        const amt = Number(e.amount) || 0;
+        totals[cat] = (totals[cat] || 0) + amt;
+        grandTotal += amt;
+      });
+
+      totalPill.innerText = `$${grandTotal.toFixed(2)}`;
+
+      if (grandTotal === 0) {
+        svg.innerHTML = '<circle cx="50" cy="50" r="38" fill="none" stroke="#e2e8f0" stroke-width="12"></circle>';
+        legendList.innerHTML = '<div class="text-xs text-slate-400">No expenses recorded yet.</div>';
+        centerCat.innerText = 'Empty';
+        centerAmt.innerText = '$0.00';
+        return;
+      }
+
+      // Calculate SVG stroke-dasharray segments
+      const radius = 38;
+      const circumference = 2 * Math.PI * radius; // ~238.76
+      let cumulativePct = 0;
+      let svgHtml = '';
+      let legendHtml = '';
+
+      let topCategory = null;
+      let topCategoryAmt = -1;
+
+      CATEGORIES.forEach(cat => {
+        const amt = totals[cat.name] || 0;
+        if (amt > topCategoryAmt) {
+          topCategoryAmt = amt;
+          topCategory = cat.name;
+        }
+
+        if (amt > 0) {
+          const pct = amt / grandTotal;
+          const strokeLength = pct * circumference;
+          const strokeOffset = -(cumulativePct * circumference);
+
+          svgHtml += `
+            <circle cx="50" cy="50" r="${radius}" fill="none" stroke="${cat.color}" stroke-width="14"
+              stroke-dasharray="${strokeLength} ${circumference - strokeLength}"
+              stroke-dashoffset="${strokeOffset}"
+              class="transition-all hover:stroke-width-[18] cursor-pointer"
+              onmouseover="highlightDonutSlice('${cat.name}', ${amt}, ${(pct * 100).toFixed(1)})"
+              onmouseout="resetDonutSlice('${topCategory}', ${topCategoryAmt}, ${((topCategoryAmt / grandTotal) * 100).toFixed(1)})">
+            </circle>
+          `;
+
+          legendHtml += `
+            <div class="flex items-center justify-between hover:bg-slate-50 p-1 rounded-lg transition-colors cursor-pointer" onmouseover="highlightDonutSlice('${cat.name}', ${amt}, ${(pct * 100).toFixed(1)})" onmouseout="resetDonutSlice('${topCategory}', ${topCategoryAmt}, ${((topCategoryAmt / grandTotal) * 100).toFixed(1)})">
+              <div class="flex items-center gap-2 truncate">
+                <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background-color: ${cat.color}"></span>
+                <span class="font-medium text-slate-700 truncate">${escapeHtml(cat.name)}</span>
+              </div>
+              <div class="flex items-center gap-2 font-mono flex-shrink-0">
+                <span class="font-bold text-slate-900">$${amt.toFixed(2)}</span>
+                <span class="text-slate-400 text-[11px]">(${(pct * 100).toFixed(0)}%)</span>
+              </div>
+            </div>
+          `;
+
+          cumulativePct += pct;
+        }
+      });
+
+      svg.innerHTML = svgHtml;
+      legendList.innerHTML = legendHtml;
+
+      centerCat.innerText = topCategory || 'General';
+      centerAmt.innerText = `$${topCategoryAmt.toFixed(2)}`;
+    }
+
+    function highlightDonutSlice(name, amt, pct) {
+      document.getElementById('donut-center-category').innerText = name;
+      document.getElementById('donut-center-amount').innerText = `$${amt.toFixed(2)}`;
+    }
+
+    function resetDonutSlice(topCat, topAmt, pct) {
+      document.getElementById('donut-center-category').innerText = topCat;
+      document.getElementById('donut-center-amount').innerText = `$${topAmt.toFixed(2)}`;
+    }
+
+    // 14-Day Trajectory Bar Chart
+    function renderTrajectoryChart() {
+      const container = document.getElementById('trajectory-chart-container');
+      const now = new Date();
+      const days = [];
+      for (let i = 13; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(now.getDate() - i);
+        days.push(d.toISOString().split('T')[0]);
+      }
+
+      // Aggregate spend per day
+      const dayTotals = {};
+      days.forEach(day => dayTotals[day] = 0);
+      expenses.forEach(e => {
+        if (dayTotals[e.date] !== undefined) {
+          dayTotals[e.date] += Number(e.amount);
+        }
+      });
+
+      const maxDaySpend = Math.max(35, ...Object.values(dayTotals));
+      const budgetCap = budgetConfig.totalMonthly || 850;
+      const safeDaily = budgetCap / 30; // standard daily benchmark
+      const burnLineTopPct = Math.max(5, Math.min(95, 100 - (safeDaily / maxDaySpend) * 100));
+
+      let barsHtml = `
+        <!-- Safe burn rate dashed line -->
+        <div class="absolute w-full border-b-2 border-dashed border-rose-300 pointer-events-none z-10 flex items-center justify-end pr-1" style="top: ${burnLineTopPct}%">
+          <span class="bg-rose-50 text-rose-600 text-[9px] font-bold px-1.5 py-0.5 rounded font-mono shadow-xs -mt-5">Burn Cap: $${safeDaily.toFixed(1)}/d</span>
+        </div>
+        <div class="w-full flex items-end justify-between gap-1.5 h-36 relative z-0">
+      `;
+
+      days.forEach(day => {
+        const amt = dayTotals[day] || 0;
+        const heightPct = Math.max(4, (amt / maxDaySpend) * 100);
+        const dayLabel = day.slice(8); // 'DD'
+        const isOverBurn = amt > safeDaily;
+        const barColor = amt === 0 ? 'bg-slate-200' : isOverBurn ? 'bg-amber-500 hover:bg-amber-600' : 'bg-indigo-500 hover:bg-indigo-600';
+
+        barsHtml += `
+          <div class="flex-1 flex flex-col items-center h-full justify-end group relative cursor-pointer">
+            <!-- Tooltip -->
+            <div class="absolute bottom-full mb-2 hidden group-hover:flex flex-col items-center pointer-events-none z-30">
+              <div class="bg-slate-900 text-white text-[10px] font-mono px-2 py-1 rounded-lg shadow-xl whitespace-nowrap">
+                <span class="font-bold text-amber-300">$${amt.toFixed(2)}</span>
+                <span class="text-slate-300"> (${day})</span>
+              </div>
+              <div class="w-2 h-2 bg-slate-900 rotate-45 -mt-1"></div>
+            </div>
+
+            <!-- Bar -->
+            <div class="w-full rounded-t-md transition-all duration-300 ${barColor}" style="height: ${heightPct}%"></div>
+            <!-- Day Label -->
+            <span class="text-[9px] text-slate-400 mt-1 font-mono">${dayLabel}</span>
+          </div>
+        `;
+      });
+
+      barsHtml += '</div>';
+      container.innerHTML = barsHtml;
+    }
+
+    // Budget vs Actual Variance
+    function renderVarianceBars() {
+      const container = document.getElementById('variance-bars-container');
+      const catTotals = {};
+      CATEGORIES.forEach(c => catTotals[c.name] = 0);
+      expenses.forEach(e => {
+        const cat = e.category || 'Other';
+        catTotals[cat] = (catTotals[cat] || 0) + Number(e.amount);
+      });
+
+      let html = '';
+      CATEGORIES.forEach(cat => {
+        const cap = budgetConfig.categories[cat.name] || cat.defaultCap || 0;
+        if (cap === 0 && catTotals[cat.name] === 0) return; // skip unused Other
+
+        const spent = catTotals[cat.name] || 0;
+        const pct = cap > 0 ? Math.min(100, (spent / cap) * 100) : 0;
+        const remaining = cap - spent;
+        const isOver = remaining < 0;
+
+        html += `
+          <div>
+            <div class="flex items-center justify-between text-xs mb-1">
+              <span class="font-semibold text-slate-800">${escapeHtml(cat.name)}</span>
+              <div class="flex items-center gap-2">
+                <span class="font-mono text-slate-500">$${spent.toFixed(2)} / $${cap.toFixed(2)}</span>
+                <span class="text-[10px] font-bold px-1.5 py-0.2 rounded ${isOver ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-700'}">
+                  ${isOver ? `-$${Math.abs(remaining).toFixed(2)} over` : `+$${remaining.toFixed(2)} left`}
+                </span>
+              </div>
+            </div>
+            <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+              <div class="h-2 rounded-full transition-all duration-500" style="width: ${pct}%; background-color: ${isOver ? '#ef4444' : cat.color}"></div>
+            </div>
+          </div>
+        `;
+      });
+
+      container.innerHTML = html || '<p class="text-xs text-slate-400">Configure your budget caps above.</p>';
+    }
+
+    // Habit Insights (Weekend vs Weekday + Largest Expense)
+    function renderHabitInsights() {
+      let weekdaySpend = 0;
+      let weekdayDays = new Set();
+      let weekendSpend = 0;
+      let weekendDays = new Set();
+      let largest = null;
+
+      expenses.forEach(e => {
+        const amt = Number(e.amount);
+        const dayOfWeek = new Date(e.date + 'T00:00:00').getDay(); // 0 is Sunday, 6 is Saturday
+        const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
+
+        if (isWeekend) {
+          weekendSpend += amt;
+          weekendDays.add(e.date);
+        } else {
+          weekdaySpend += amt;
+          weekdayDays.add(e.date);
+        }
+
+        if (!largest || amt > largest.amount) {
+          largest = e;
+        }
+      });
+
+      const total = weekdaySpend + weekendSpend;
+      const weekendPct = total > 0 ? Math.round((weekendSpend / total) * 100) : 0;
+      const weekdayPct = 100 - weekendPct;
+
+      document.getElementById('insight-weekend-ratio').innerText = `${weekendPct}% Weekend Spend`;
+      document.getElementById('ratio-weekday-bar').style.width = `${weekdayPct}%`;
+      document.getElementById('ratio-weekend-bar').style.width = `${weekendPct}%`;
+
+      const weekdayAvg = weekdayDays.size > 0 ? (weekdaySpend / weekdayDays.size) : 0;
+      const weekendAvg = weekendDays.size > 0 ? (weekendSpend / weekendDays.size) : 0;
+
+      document.getElementById('insight-weekday-text').innerText = `Weekday Avg: $${weekdayAvg.toFixed(2)}/day`;
+      document.getElementById('insight-weekend-text').innerText = `Weekend Avg: $${weekendAvg.toFixed(2)}/day`;
+
+      if (largest) {
+        document.getElementById('insight-largest-title').innerText = `${largest.desc} ($${Number(largest.amount).toFixed(2)})`;
+        document.getElementById('insight-largest-desc').innerText = `Logged on ${largest.date} in ${largest.category}. Consumed ${((Number(largest.amount) / (budgetConfig.totalMonthly || 850)) * 100).toFixed(1)}% of your monthly budget.`;
+      } else {
+        document.getElementById('insight-largest-title').innerText = 'No expenses logged yet';
+        document.getElementById('insight-largest-desc').innerText = 'Log expenses to see your single highest spending point.';
+      }
+    }
+
+    // --- Tab 3: Student Savings Hacks & Calculator ---
+    function calculateSimulator() {
+      let monthly = 0;
+      const activeHabits = [];
+
+      if (document.getElementById('sim-lunch').checked) { monthly += 120; activeHabits.push('Meal Prep'); }
+      if (document.getElementById('sim-books').checked) { monthly += 30; activeHabits.push('Digital Books'); }
+      if (document.getElementById('sim-edu').checked) { monthly += 45; activeHabits.push('.edu Perks'); }
+      if (document.getElementById('sim-coffee').checked) { monthly += 100; activeHabits.push('Dorm Coffee'); }
+      if (document.getElementById('sim-transit').checked) { monthly += 80; activeHabits.push('Campus Biking'); }
+      if (document.getElementById('sim-roommate').checked) { monthly += 60; activeHabits.push('Bulk Pantry'); }
+
+      const semester = monthly * 4;
+
+      document.getElementById('sim-monthly-total').innerText = `+$${monthly.toFixed(2)}`;
+      document.getElementById('sim-semester-total').innerText = `+$${semester.toFixed(2)}`;
+
+      const impactText = document.getElementById('sim-impact-text');
+      if (monthly === 0) {
+        impactText.innerText = 'Select one or more habits above to project your student savings!';
+      } else {
+        const campusMeals = Math.floor(semester / 12.50);
+        const textbookSets = Math.floor(semester / 80);
+        impactText.innerHTML = `<strong>Outstanding!</strong> You're saving <strong>+$${monthly}/mo</strong>. Over 1 semester that's <strong>$${semester} saved</strong>, equivalent to <strong>${campusMeals} campus lunches</strong> or <strong>${textbookSets} semesters of free textbooks</strong>!`;
+      }
+    }
+
+    // Heuristics Engine
+    function renderHeuristics() {
+      const container = document.getElementById('heuristics-container');
+      const heuristics = [];
+
+      let total = 0;
+      let foodTotal = 0;
+      let microTxCount = 0;
+      let venmoCount = 0;
+
+      expenses.forEach(e => {
+        const amt = Number(e.amount);
+        total += amt;
+        if (e.category === 'Food & Groceries') foodTotal += amt;
+        if (amt < 7.00) microTxCount++;
+        if (e.paymentMethod === 'Venmo / UPI') venmoCount++;
+      });
+
+      // Heuristic 1: Food concentration
+      if (total > 0 && (foodTotal / total) > 0.45) {
+        heuristics.push({
+          badge: 'Food Concentration Alert',
+          color: 'amber',
+          icon: '🍕',
+          title: 'Food accounts for over 45% of spending',
+          desc: 'High dining hall and takeout ratio. Consider activating campus meal plan dining dollars or batch-prepping weekend dinners with roommates.'
+        });
+      }
+
+      // Heuristic 2: Micro-transactions
+      if (microTxCount >= 3) {
+        heuristics.push({
+          badge: 'Micro-Expense Leakage',
+          color: 'indigo',
+          icon: '☕',
+          title: `${microTxCount} purchases under $7.00 detected`,
+          desc: 'Frequent energy drinks, coffee, and vending machine snacks quietly erode monthly cushion. Carrying an insulated thermos saves ~$40/mo.'
+        });
+      }
+
+      // Heuristic 3: Venmo splits
+      if (venmoCount >= 2) {
+        heuristics.push({
+          badge: 'Venmo / UPI Cashflow Flow',
+          color: 'emerald',
+          icon: '💸',
+          title: 'Active group roommate expenses',
+          desc: 'You frequently use Venmo/UPI for dorm splits. Keep track of outstanding roommate IOUs so your actual checking balance stays healthy.'
+        });
+      }
+
+      // Fallback encouraging tip
+      heuristics.push({
+        badge: 'Semester Cushion Tip',
+        color: 'purple',
+        icon: '🎓',
+        title: 'Buffer for finals week',
+        desc: 'Reserve a $60 emergency cushion in your ledger for finals week print runs, late night study snacks, and campus transport.'
+      });
+
+      container.innerHTML = heuristics.slice(0, 4).map(h => `
+        <div class="p-4 bg-slate-50/80 rounded-xl border border-slate-200 flex items-start gap-3">
+          <span class="text-xl flex-shrink-0">${h.icon}</span>
+          <div>
+            <span class="text-[10px] font-bold uppercase tracking-wider text-${h.color}-600 bg-${h.color}-50 px-2 py-0.5 rounded-md inline-block mb-1">${escapeHtml(h.badge)}</span>
+            <h4 class="text-xs font-bold text-slate-800">${escapeHtml(h.title)}</h4>
+            <p class="text-[11px] text-slate-500 mt-0.5 leading-relaxed">${escapeHtml(h.desc)}</p>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // --- Budget Configuration Modal ---
+    function openBudgetModal() {
+      document.getElementById('budget-input-total').value = budgetConfig.totalMonthly || 850;
+      const catInputs = document.getElementById('budget-category-inputs');
+      catInputs.innerHTML = CATEGORIES.filter(c => c.name !== 'Other').map(cat => {
+        const val = budgetConfig.categories[cat.name] !== undefined ? budgetConfig.categories[cat.name] : cat.defaultCap;
+        return `
+          <div class="flex items-center justify-between gap-3">
+            <span class="text-slate-700 truncate">${escapeHtml(cat.name)}</span>
+            <div class="flex items-center gap-1 w-28">
+              <span class="text-slate-400 font-mono">$</span>
+              <input type="number" step="5" min="0" data-cat="${escapeHtml(cat.name)}" value="${val}" class="budget-cat-field w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg text-right font-mono font-bold focus:bg-white focus:ring-1 focus:ring-indigo-500">
+            </div>
+          </div>
+        `;
+      }).join('');
+      document.getElementById('modal-budget').classList.remove('hidden');
+    }
+
+    function closeBudgetModal() {
+      document.getElementById('modal-budget').classList.add('hidden');
+    }
+
+    function saveBudgetSettings() {
+      const total = parseFloat(document.getElementById('budget-input-total').value);
+      if (isNaN(total) || total <= 0) {
+        alert('Please enter a valid monthly budget limit.');
+        return;
+      }
+      budgetConfig.totalMonthly = total;
+
+      document.querySelectorAll('.budget-cat-field').forEach(input => {
+        const cat = input.getAttribute('data-cat');
+        const val = parseFloat(input.value) || 0;
+        budgetConfig.categories[cat] = val;
+      });
+
+      saveBudget();
+      renderAll();
+      closeBudgetModal();
+      showToast('Monthly budget updated!');
+    }
+
+    // --- Antigravity Easter Egg & Zero-Gravity Physics Mode ---
+    function initZeroGravity() {
+      if (isZeroGravity) {
+        document.body.classList.add('zero-gravity-active');
+        spawnZgParticles();
+      }
+      updateZeroGravityUI();
+    }
+
+    function toggleZeroGravity() {
+      isZeroGravity = !isZeroGravity;
+      localStorage.setItem(STORAGE_KEY_ZG, isZeroGravity ? 'true' : 'false');
+      if (isZeroGravity) {
+        document.body.classList.add('zero-gravity-active');
+        spawnZgParticles();
+        showToast('Zero-Gravity Mode Active! Weightless campus physics engaged 🚀');
+      } else {
+        document.body.classList.remove('zero-gravity-active');
+        removeZgParticles();
+        showToast('Gravity restored (1.0 G)');
+      }
+      updateZeroGravityUI();
+    }
+
+    function updateZeroGravityUI() {
+      const badge = document.getElementById('zg-status-badge');
+      const btn = document.getElementById('zg-toggle-btn');
+      if (badge && btn) {
+        if (isZeroGravity) {
+          badge.className = 'ml-1 w-2 h-2 rounded-full bg-emerald-500 animate-ping';
+          btn.className = 'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-emerald-300 bg-emerald-50 text-emerald-800 transition-all shadow-sm';
+        } else {
+          badge.className = 'ml-1 w-2 h-2 rounded-full bg-slate-300';
+          btn.className = 'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-indigo-200 bg-indigo-50/70 text-indigo-700 hover:bg-indigo-100 transition-all';
+        }
+      }
+    }
+
+    function spawnZgParticles() {
+      removeZgParticles();
+      const container = document.getElementById('particles-container');
+      for (let i = 0; i < 16; i++) {
+        const p = document.createElement('div');
+        p.className = 'zg-particle';
+        const size = Math.random() * 12 + 4;
+        p.style.width = `${size}px`;
+        p.style.height = `${size}px`;
+        p.style.left = `${Math.random() * 100}vw`;
+        p.style.animationDuration = `${Math.random() * 8 + 8}s`;
+        p.style.animationDelay = `${Math.random() * 5}s`;
+        container.appendChild(p);
+      }
+    }
+
+    function removeZgParticles() {
+      const container = document.getElementById('particles-container');
+      if (container) container.innerHTML = '';
+    }
+
+    // --- Interactive Python Terminal Simulator ---
+    function openAntigravityModal() {
+      document.getElementById('modal-antigravity').classList.remove('hidden');
+      setTimeout(() => {
+        const inp = document.getElementById('terminal-input');
+        if (inp) inp.focus();
+      }, 100);
+    }
+
+    function closeAntigravityModal() {
+      document.getElementById('modal-antigravity').classList.add('hidden');
+    }
+
+    function runTerminalCmd(cmd) {
+      document.getElementById('terminal-input').value = cmd;
+      handleTerminalSubmit(new Event('submit'));
+    }
+
+    function handleTerminalSubmit(event) {
+      if (event) event.preventDefault();
+      const inputEl = document.getElementById('terminal-input');
+      const screen = document.getElementById('terminal-screen');
+      const rawCmd = (inputEl.value || '').trim();
+      inputEl.value = '';
+
+      if (!rawCmd) return;
+
+      // Echo command
+      const lineEcho = document.createElement('div');
+      lineEcho.className = 'text-emerald-400 font-bold';
+      lineEcho.innerText = `>>> ${rawCmd}`;
+      screen.appendChild(lineEcho);
+
+      const resp = document.createElement('div');
+      resp.className = 'text-slate-300 pl-4 py-0.5 whitespace-pre-wrap';
+
+      const cmd = rawCmd.toLowerCase();
+
+      if (cmd === 'import antigravity') {
+        resp.innerHTML = `
+<span class="text-amber-400 font-bold">[Antigravity Initiated]</span>
+* Gravitational acceleration set to 0.0 m/s² *
+* You begin floating comfortably above your campus dorm desk! *
+
+      \\O/   &lt;-- You're flying!
+       |
+      / \\
+       ~ ~ ~ (Python power xkcd #353)
+
+<span class="text-indigo-400">Zero-Gravity physics mode has been activated in CampusSpend!</span>
+Opening xkcd comic tribute...
+        `;
+        if (!isZeroGravity) toggleZeroGravity();
+      } else if (cmd === 'help()' || cmd === 'help') {
+        resp.innerHTML = `
+CampusSpend Python Interactive Help:
+  <span class="text-emerald-300">import antigravity</span> : Engage zero-gravity floating mode & xkcd #353 lore
+  <span class="text-emerald-300">expenses()</span>         : Print active student ledger records
+  <span class="text-emerald-300">burn_rate()</span>        : Compute safe daily burn rate
+  <span class="text-emerald-300">budget()</span>           : View monthly budget caps & cushion
+  <span class="text-emerald-300">clear()</span>            : Clear terminal output
+  <span class="text-emerald-300">exit()</span>             : Close terminal
+        `;
+      } else if (cmd === 'expenses()' || cmd === 'expenses') {
+        resp.innerHTML = `
+<strong>Active Ledger (${expenses.length} records):</strong>
+${expenses.slice(0, 5).map(e => `  [${e.date}] ${e.category.padEnd(20)} $${Number(e.amount).toFixed(2).padStart(6)} : ${e.desc}`).join('\n')}
+${expenses.length > 5 ? `  ... and ${expenses.length - 5} more items.` : ''}
+        `;
+      } else if (cmd === 'burn_rate()' || cmd === 'burn_rate') {
+        const total = expenses.reduce((s, e) => s + Number(e.amount), 0);
+        const cushion = Math.max(0, budgetConfig.totalMonthly - total);
+        const rate = (cushion / 18).toFixed(2);
+        resp.innerHTML = `<span class="text-amber-300">Safe Daily Burn Rate:</span> $${rate}/day (based on $${cushion.toFixed(2)} remaining cushion)`;
+      } else if (cmd === 'budget()' || cmd === 'budget') {
+        resp.innerHTML = `
+Monthly Budget Ceiling: $${budgetConfig.totalMonthly.toFixed(2)}
+Allocations:
+${Object.entries(budgetConfig.categories).map(([k, v]) => `  - ${k.padEnd(22)}: $${Number(v).toFixed(2)}`).join('\n')}
+        `;
+      } else if (cmd === 'clear()' || cmd === 'clear') {
+        screen.innerHTML = '';
+        return;
+      } else if (cmd === 'exit()' || cmd === 'exit') {
+        closeAntigravityModal();
+        return;
+      } else {
+        resp.innerHTML = `<span class="text-rose-400">NameError: name '${rawCmd}' is not defined.</span> Type <span class="text-emerald-300">help()</span> for valid commands.`;
+      }
+
+      screen.appendChild(resp);
+      screen.scrollTop = screen.scrollHeight;
+    }
+
+    // --- Toast Notifications ---
+    function showToast(message) {
+      let toast = document.getElementById('app-toast');
+      if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'app-toast';
+        toast.className = 'fixed bottom-5 right-5 z-50 bg-slate-900 text-white text-xs font-semibold px-4 py-2.5 rounded-xl shadow-xl flex items-center gap-2 transform translate-y-10 opacity-0 transition-all duration-200 pointer-events-none';
+        document.body.appendChild(toast);
+      }
+      toast.innerHTML = `<span>✨</span><span>${escapeHtml(message)}</span>`;
+      toast.classList.remove('translate-y-10', 'opacity-0');
+      toast.classList.add('translate-y-0', 'opacity-100');
+
+      clearTimeout(window._toastTimeout);
+      window._toastTimeout = setTimeout(() => {
+        toast.classList.remove('translate-y-0', 'opacity-100');
+        toast.classList.add('translate-y-10', 'opacity-0');
+      }, 3000);
+    }
+
+    function escapeHtml(str) {
+      if (str === null || str === undefined) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+  </script>
+</body>
+</html>
